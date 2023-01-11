@@ -10,11 +10,15 @@ import {
     EthAddress,
 } from '@aztec/sdk'
 
+import { StatusEnum } from './App'
+
 type ConnectButtonProps = {
     setUser: Dispatch<SetStateAction<AztecSdkUser | undefined>>
+    setStatus: Dispatch<SetStateAction<StatusEnum>>
+    status: StatusEnum
 }
 
-function ConnectButton({ setUser }: ConnectButtonProps) {
+function ConnectButton({ setUser, setStatus, status }: ConnectButtonProps) {
     const { address, isConnected } = useAccount()
     const { connect } = useConnect({
         connector: new InjectedConnector(),
@@ -22,35 +26,41 @@ function ConnectButton({ setUser }: ConnectButtonProps) {
     const provider = useProvider()
     const connector = new InjectedConnector()
 
-    const connectWallet = async () => {
-        if (!isConnected) connect()
-        console.log({ address })
+    async function connectWallet() {
+        try {
+            if (status !== StatusEnum.Disconnected) return
+            setStatus(StatusEnum.Init)
 
-        const ethereumProvider: EthereumProvider = new EthersAdapter(provider)
+            if (!isConnected) connect()
 
-        const sdk = await createAztecSdk(ethereumProvider, {
-            serverUrl: 'http://localhost:8081',
-            pollInterval: 1000,
-            memoryDb: true,
-            debug: 'bb:*',
-            flavour: SdkFlavour.PLAIN,
-            minConfirmation: 1,
-        })
-        await sdk.run()
-        console.log({ sdk })
+            const ethereumProvider: EthereumProvider = new EthersAdapter(
+                provider
+            )
+            const sdk = await createAztecSdk(ethereumProvider, {
+                serverUrl: 'http://localhost:8081',
+                pollInterval: 1000,
+                memoryDb: true,
+                debug: 'bb:*',
+                flavour: SdkFlavour.PLAIN,
+                minConfirmation: 1,
+            })
+            await sdk.run()
 
-        const ethereumAddress = EthAddress.fromString(address)
-        const { publicKey, privateKey } = await sdk.generateAccountKeyPair(
-            ethereumAddress,
-            await connector.getProvider()
-        )
-        console.log({ publicKey, privateKey })
+            const ethereumAddress = EthAddress.fromString(address)
+            const { publicKey, privateKey } = await sdk.generateAccountKeyPair(
+                ethereumAddress,
+                await connector.getProvider()
+            )
 
-        const user = (await sdk.userExists(publicKey))
-            ? await sdk.getUser(publicKey)
-            : await sdk.addUser(privateKey)
+            const user = (await sdk.userExists(publicKey))
+                ? await sdk.getUser(publicKey)
+                : await sdk.addUser(privateKey)
 
-        setUser(user)
+            setUser(user)
+            setStatus(StatusEnum.Connected)
+        } catch {
+            setStatus(StatusEnum.Disconnected)
+        }
     }
 
     return (
