@@ -6,6 +6,7 @@ import {
     EthersAdapter,
     type EthereumProvider,
     type AztecSdkUser,
+    type AztecSdk,
     SdkFlavour,
     EthAddress,
 } from '@aztec/sdk'
@@ -15,10 +16,16 @@ import { StatusEnum } from './App'
 type ConnectButtonProps = {
     setUser: Dispatch<SetStateAction<AztecSdkUser | undefined>>
     setStatus: Dispatch<SetStateAction<StatusEnum>>
+    setSdk: Dispatch<SetStateAction<AztecSdk | undefined>>
     status: StatusEnum
 }
 
-function ConnectButton({ setUser, setStatus, status }: ConnectButtonProps) {
+function ConnectButton({
+    setUser,
+    setStatus,
+    setSdk,
+    status,
+}: ConnectButtonProps) {
     const { address, isConnected } = useAccount()
     const { connect } = useConnect({
         connector: new InjectedConnector(),
@@ -57,6 +64,7 @@ function ConnectButton({ setUser, setStatus, status }: ConnectButtonProps) {
                 : await sdk.addUser(privateKey)
 
             setUser(user)
+            setSdk(sdk)
             setStatus(StatusEnum.Connected)
         } catch {
             setStatus(StatusEnum.Disconnected)
